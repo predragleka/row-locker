@@ -1,15 +1,19 @@
 <?php
+declare(strict_types = 1);
+
 namespace RowLocker\Model\Behavior;
 
+use Cake\Collection\Collection;
+use Cake\Database\Expression\QueryExpression;
 use Cake\ORM\Behavior;
 use Cake\ORM\Query;
-use Cake\ORM\Table;
 use Cake\Utility\Hash;
 use DateTimeImmutable;
 use RowLocker\LockableInterface;
 
 /**
  * Contains custom finders
+ *
  */
 class RowLockerBehavior extends Behavior
 {
@@ -24,7 +28,7 @@ class RowLockerBehavior extends Behavior
         'locked_session' => 'locked_session',
         'locked_by' => 'locked_by',
         'implementedFinders' => ['unlocked' => 'findUnlocked', 'autoLock' => 'findAutoLock'],
-        'implementedMethods' => ['lockingMonitor' => 'lockingMonitor']
+        'implementedMethods' => ['lockingMonitor' => 'lockingMonitor'],
     ];
 
     /**
@@ -32,7 +36,7 @@ class RowLockerBehavior extends Behavior
      *
      * @return array
      */
-    public function implementedEvents()
+    public function implementedEvents() : array
     {
         return [];
     }
@@ -41,21 +45,23 @@ class RowLockerBehavior extends Behavior
      * Returns the rows that are either unlocker or locked by the provided user
      * This finder requires the `lockingUser` key in options
      *
-     * @param Query $quert The Query to modify
-     * @param array|ArrayObject $options The options containing the `lockingUser` key
-     * @return Query
+     * @param \Cake\ORM\Query $query The Query to modify
+     * @param array $options The options containing the `lockingUser` key
+     *
+     * @return \Cake\ORM\Query
      */
-    public function findUnlocked(Query $query, $options)
+    public function findUnlocked(Query $query, array $options): Query
     {
-        return $query->andWhere(function ($exp) use ($options) {
+        return $query->andWhere(function (QueryExpression $exp) use ($options) {
             $timeCol = $this->_config['locked_time'];
-            $entityClass = $this->_table->entityClass();
+            $entityClass = $this->_table->getEntityClass();
 
             $nullExp = clone $exp;
-            $edge = new DateTimeImmutable('@'. (time() - $entityClass::getLockTimeout()));
-            $or = $exp->or_([
+            /** @noinspection PhpUndefinedMethodInspection */
+            $edge = new DateTimeImmutable('@' . (time() - $entityClass::getLockTimeout()));
+            $or = $exp->or([
                 $nullExp->isNull($timeCol),
-                $exp->lte($timeCol, $edge, 'datetime')
+                $exp->lte($timeCol, $edge, 'datetime'),
             ]);
 
             if (!empty($options['lockingUser'])) {
@@ -71,16 +77,17 @@ class RowLockerBehavior extends Behavior
      * This finder requires the `lockingUser` key in options and optionally the
      * `lockingSession`.
      *
-     * @param Query $quert The Query to modify
-     * @param array|ArrayObject $options The options containing the `lockingUser` key
-     * @return Query
+     * @param \Cake\ORM\Query $query The Query to modify
+     * @param array $options The options containing the `lockingUser` key
+     *
+     * @return \Cake\ORM\Query
      */
-    public function findAutoLock(Query $query, $options)
+    public function findAutoLock(Query $query, array $options): Query
     {
         $by = Hash::get($options, 'lockingUser');
         $session = Hash::get($options, 'lockingSession');
 
-        return $query->formatResults(function ($results) use ($by, $session) {
+        return $query->formatResults(function (Collection $results) use ($by, $session) {
             $results
                 ->filter(function ($r) {
                     return $r instanceof LockableInterface;
@@ -89,6 +96,7 @@ class RowLockerBehavior extends Behavior
                     $r->lock($by, $session);
                     $this->_table->save($r);
                 });
+
             return $results;
         });
     }
@@ -101,16 +109,17 @@ class RowLockerBehavior extends Behavior
      *
      * @return callable
      */
-    public function lockingMonitor()
+    public function lockingMonitor(): callable
     {
         return function ($callback) {
-            $connection = $this->_table->connection();
+            $connection = $this->_table->getConnection();
             $level = str_replace('-', ' ', $connection->query('SELECT @@session.tx_isolation')->fetchAll()[0][0]);
             $connection->execute('SET TRANSACTION ISOLATION LEVEL SERIALIZABLE')->closeCursor();
 
             try {
                 return $connection->transactional($callback);
-            } finally {
+            }
+            finally {
                 $connection->execute("SET TRANSACTION ISOLATION LEVEL $level")->closeCursor();
             }
         };

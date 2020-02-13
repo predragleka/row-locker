@@ -1,4 +1,6 @@
 <?php
+declare(strict_types = 1);
+
 namespace RowLocker;
 
 use Cake\Database\Type;
@@ -13,10 +15,8 @@ trait LockableTrait
 
     /**
      * {@inheritDoc}
-     *
-     * @return void
      */
-    public function lock($by = null, $session = null)
+    function lock($by = null, string $session = null) : void
     {
         if ($this->isLocked() && $by !== $this->lockOwner()) {
             throw new LockingException('This entity is already locked');
@@ -37,7 +37,7 @@ trait LockableTrait
      *
      * @return void
      */
-    public function unlock()
+    public function unlock(): void
     {
         $this->set([
             'locked_by' => null,
@@ -51,9 +51,10 @@ trait LockableTrait
      *
      * @return bool
      */
-    public function isLocked()
+    public function isLocked(): bool
     {
         $now = time();
+        /** @var \DateTime $locked */
         $locked = $this->get('locked_time');
         $locked = $locked ? $locked->format('U') : 0;
 
@@ -75,7 +76,7 @@ trait LockableTrait
      *
      * @return string|null
      */
-    public function lockSession()
+    public function lockSession(): ?string
     {
         return $this->get('locked_session');
     }
@@ -85,7 +86,7 @@ trait LockableTrait
      *
      * @return void
      */
-    public static function setLockTimeout($seconds)
+    public static function setLockTimeout($seconds): void
     {
         static::$lockTimeout = (int)$seconds;
     }
@@ -95,7 +96,7 @@ trait LockableTrait
      *
      * @return int
      */
-    public static function getLockTimeout()
+    public static function getLockTimeout(): int
     {
         return static::$lockTimeout;
     }

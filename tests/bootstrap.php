@@ -13,4 +13,4 @@ $root = $findRoot(__FILE__);
 unset($findRoot);
 chdir($root);
 
-require $root . '/vendor/cakephp/cakephp/tests/bootstrap.php';
+require 'vendor/cakephp/cakephp/tests/bootstrap.php';

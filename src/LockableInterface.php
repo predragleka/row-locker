@@ -1,4 +1,6 @@
 <?php
+declare(strict_types = 1);
+
 namespace RowLocker;
 
 /**
@@ -13,29 +15,30 @@ interface LockableInterface
      *
      * @param string $by The user identifier
      * @param string $session The session identifier
+     *
      * @return void
      * @throw \LockingException if the row is already locked
      */
-    public function lock($by = null, $session = null);
+    function lock($by = null, string $session = null) : void;
 
     /**
      * Unlocks the entity
      *
      * @return void
      */
-    public function unlock();
+    public function unlock(): void;
 
     /**
      * Returns true if the entity is locked
      *
-     * @return void
+     * @return bool
      */
-    public function isLocked();
+    public function isLocked(): bool;
 
     /**
      * Returns the user that locked the entity if any
      *
-     * @return string|null
+     * @return mixed|null
      */
     public function lockOwner();
 
@@ -44,7 +47,7 @@ interface LockableInterface
      *
      * @return string|null
      */
-    public function lockSession();
+    public function lockSession(): ?string;
 
     /**
      * Sets the amount of seconds the lock can be valid
@@ -52,12 +55,12 @@ interface LockableInterface
      * @param int $seconds AMount of seconds
      * @return void
      */
-    public static function setLockTimeout($seconds);
+    public static function setLockTimeout($seconds): void;
 
     /**
      * Returs the amout of seconds a lock is valid for
      *
      * @return int
      */
-    public static function getLockTimeout();
+    public static function getLockTimeout(): int;
 }
